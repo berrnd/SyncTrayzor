@@ -5,11 +5,24 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:s="https://github.com/canton7/Stylet"
              xmlns:l="clr-namespace:SyncTrayzor.Localization"
-             xmlns:cefSharp="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
     <Grid>
-        <cefSharp:ChromiumWebBrowser x:Name="browser" Address="{Binding Location}" WebBrowser="{Binding WebBrowser, Mode=OneWayToSource}"/>
+        <Grid Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <ItemsControl ItemsSource="{Binding Folders}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ContentControl s:View.Model="{Binding}" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+        
         <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{l:Loc ViewerView_SyncthingStarting}"
                    Visibility="{Binding ShowSyncThingStarting, Converter={x:Static s:BoolToVisibilityConverter.Instance}}"
                    FontSize="16"/>

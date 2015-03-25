@@ -1,5 +1,4 @@
-﻿using CefSharp;
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.Win32;
 using NLog;
 using Stylet;

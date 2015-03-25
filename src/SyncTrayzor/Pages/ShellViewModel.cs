@@ -94,7 +94,7 @@ namespace SyncTrayzor.Pages
         }
         public void RefreshBrowser()
         {
-            this.Viewer.RefreshBrowser();
+            //this.Viewer.RefreshBrowser();
         }
 
         public bool CanOpenBrowser
