@@ -67,7 +67,7 @@ namespace SyncTrayzor.Services
                 if (!this._watchedFolders.Contains(folder.FolderId))
                     continue;
 
-                var watcher = new DirectoryWatcher(folder.Path, this.BackoffInterval, this.FolderExistenceCheckingInterval);
+                var watcher = new DirectoryWatcher(folder.ExpandedPath, this.BackoffInterval, this.FolderExistenceCheckingInterval);
                 watcher.PreviewDirectoryChanged += (o, e) => e.Cancel = this.PreviewDirectoryChanged(folder, e.SubPath);
                 watcher.DirectoryChanged += (o, e) => this.DirectoryChanged(folder, e.SubPath);
 

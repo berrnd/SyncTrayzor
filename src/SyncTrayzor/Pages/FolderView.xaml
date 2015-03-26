@@ -5,9 +5,11 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:xaml="clr-namespace:SyncTrayzor.Xaml"
              mc:Ignorable="d" 
-             d:DesignHeight="300" d:DesignWidth="300">
-    <xaml:Expander HeaderLeft="SyncBox" HeaderRight="Synced">
-        <ItemsControl Margin="10" AlternationCount="2">
+             d:DesignHeight="300" d:DesignWidth="300"
+             xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
+             x:Name="Root">
+    <xaml:Expander HeaderLeft="{Binding FolderId}" HeaderRight="Synced">
+        <ItemsControl Margin="10" AlternationCount="2" ItemsSource="{Binding DisplayLines}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Grid x:Name="Row">
@@ -23,10 +25,6 @@
                     </DataTemplate.Triggers>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
-            <ItemsControl.Items>
-                <xaml:DisplayLine Title="Folder Path" Value="~/SyncBox"/>
-                <xaml:DisplayLine Title="Global State" Value="34 items, ~85.5MiB"/>
-            </ItemsControl.Items>
         </ItemsControl>
     </xaml:Expander>
 </UserControl>

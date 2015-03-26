@@ -42,6 +42,7 @@ namespace SyncTrayzor.SyncThing
     {
         public string FolderId { get; private set; }
         public string Path { get; private set; }
+        public string ExpandedPath { get; private set; }
 
         private readonly object syncStateLock = new object();
         private FolderSyncState _syncState;
@@ -62,10 +63,11 @@ namespace SyncTrayzor.SyncThing
             set { lock (this.ignoresLock) { this._ignores = value; } }
         }
 
-        public Folder(string folderId, string path, FolderIgnores ignores)
+        public Folder(string folderId, string path, string expandedPath, FolderIgnores ignores)
         {
             this.FolderId = folderId;
             this.Path = path;
+            this.ExpandedPath = expandedPath;
             this.SyncState = FolderSyncState.Idle;
             this.syncingPaths = new HashSet<string>();
             this._ignores = ignores;

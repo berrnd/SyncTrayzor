@@ -156,7 +156,7 @@ namespace SyncTrayzor.NotifyIcon
 
         public void Execute(object parameter)
         {
-            Process.Start("explorer.exe", this.folder.Path);
+            Process.Start("explorer.exe", this.folder.ExpandedPath);
         }
     }
 }

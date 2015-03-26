@@ -193,6 +193,7 @@
     <Compile Include="SyncThing\EventWatcher\DeviceDisconnectedEventArgs.cs" />
     <Compile Include="SyncThing\EventWatcher\ItemStateChangedEventArgs.cs" />
     <Compile Include="SyncThing\Folder.cs" />
+    <Compile Include="SyncThing\FoldersChangedEventArgs.cs" />
     <Compile Include="SyncThing\FolderSyncStateChangeEventArgs.cs" />
     <Compile Include="SyncThing\MessageLoggedEventArgs.cs" />
     <Compile Include="SyncThing\Api\ISyncThingApi.cs" />

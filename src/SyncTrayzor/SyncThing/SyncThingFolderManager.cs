@@ -16,7 +16,7 @@ namespace SyncTrayzor.SyncThing
         bool TryFetchById(string folderId, out Folder folder);
         IReadOnlyCollection<Folder> FetchAll();
 
-        event EventHandler FoldersChanged;
+        event EventHandler<FoldersChangedEventArgs> FoldersChanged;
         event EventHandler<FolderSyncStateChangeEventArgs> SyncStateChanged;
     }
 
@@ -26,7 +26,7 @@ namespace SyncTrayzor.SyncThing
         private readonly ISyncThingApiClient apiClient;
         private readonly ISyncThingEventWatcher eventWatcher;
 
-        public event EventHandler FoldersChanged;
+        public event EventHandler<FoldersChangedEventArgs> FoldersChanged;
         public event EventHandler<FolderSyncStateChangeEventArgs> SyncStateChanged;
 
         // Folders is a ConcurrentDictionary, which suffices for most access
@@ -77,16 +77,16 @@ namespace SyncTrayzor.SyncThing
             var folderConstructionTasks = config.Folders.Select(async folder =>
             {
                 var ignores = await this.apiClient.FetchIgnoresAsync(folder.ID);
-                var path = folder.Path;
-                if (path.StartsWith("~"))
-                    path = Path.Combine(systemInfo.Tilde, path.Substring(1).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                return new Folder(folder.ID, path, new FolderIgnores(ignores.IgnorePatterns, ignores.RegexPatterns));
+                var expandedPath = folder.Path;
+                if (expandedPath.StartsWith("~"))
+                    expandedPath = Path.Combine(systemInfo.Tilde, expandedPath.Substring(1).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                return new Folder(folder.ID, folder.Path, expandedPath, new FolderIgnores(ignores.IgnorePatterns, ignores.RegexPatterns));
             });
 
             var folders = await Task.WhenAll(folderConstructionTasks);
             this.folders = new ConcurrentDictionary<string, Folder>(folders.Select(x => new KeyValuePair<string, Folder>(x.FolderId, x)));
 
-            this.OnFoldersChanged();
+            this.OnFoldersChanged(this.FetchAll());
         }
 
         private void ItemStarted(string folderId, string item)
@@ -107,9 +107,9 @@ namespace SyncTrayzor.SyncThing
             folder.RemoveSyncingPath(item);
         }
 
-        private void OnFoldersChanged()
+        private void OnFoldersChanged(IReadOnlyCollection<Folder> folders)
         {
-            this.eventDispatcher.Raise(this.FoldersChanged);
+            this.eventDispatcher.Raise(this.FoldersChanged, new FoldersChangedEventArgs(folders));
         }
 
         private void OnSyncStateChanged(SyncStateChangedEventArgs e)

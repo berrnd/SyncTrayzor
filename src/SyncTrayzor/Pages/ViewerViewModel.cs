@@ -40,18 +40,11 @@ namespace SyncTrayzor.Pages
                 this.syncThingState = e.NewState;
             };
 
-            this.Folders = new BindableCollection<FolderViewModel>()
+            this.syncThingManager.Folders.FoldersChanged += (o, e) =>
             {
-                new FolderViewModel(new Folder("id", "path", null)),
+                var folders = e.Folders.Select(x => new FolderViewModel(x));
+                this.Folders = new BindableCollection<FolderViewModel>(folders);
             };
-
-            //this.callback = new JavascriptCallbackObject(this.OpenFolder);
-
-            //this.Bind(x => x.WebBrowser, (o, e) =>
-            //{
-            //    if (e.NewValue != null)
-            //        this.InitializeBrowser(e.NewValue);
-            //});
 
             this.SetCulture(configurationProvider.Load());
             configurationProvider.ConfigurationChanged += (o, e) => this.SetCulture(e.NewConfiguration);
@@ -70,7 +63,7 @@ namespace SyncTrayzor.Pages
             Folder folder;
             if (!this.syncThingManager.Folders.TryFetchById(folderId, out folder))
                 return;
-            Process.Start("explorer.exe", folder.Path);
+            Process.Start("explorer.exe", folder.ExpandedPath);
         }
 
         public void Start()
