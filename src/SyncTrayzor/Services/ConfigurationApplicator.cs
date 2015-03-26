@@ -83,7 +83,7 @@ namespace SyncTrayzor.Services
         private void LoadFolders()
         {
             var configuration = this.configurationProvider.Load();
-            var folderIds = this.syncThingManager.FetchAllFolders().Select(x => x.FolderId).ToList();
+            var folderIds = this.syncThingManager.Folders.FetchAll().Select(x => x.FolderId).ToList();
 
             foreach (var newKey in folderIds.Except(configuration.Folders.Select(x => x.ID)))
             {

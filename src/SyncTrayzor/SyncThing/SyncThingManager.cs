@@ -22,7 +22,6 @@ namespace SyncTrayzor.SyncThing
         event EventHandler DataLoaded;
         event EventHandler<SyncThingStateChangedEventArgs> StateChanged;
         event EventHandler<MessageLoggedEventArgs> MessageLogged;
-        event EventHandler<FolderSyncStateChangeEventArgs> FolderSyncStateChanged;
         SyncThingConnectionStats TotalConnectionStats { get; }
         event EventHandler<ConnectionStatsChangedEventArgs> TotalConnectionStatsChanged;
         event EventHandler ProcessExitedWithError;
@@ -39,15 +38,13 @@ namespace SyncTrayzor.SyncThing
         DateTime StartedTime { get; }
         DateTime LastConnectivityEventTime { get; }
         SyncthingVersion Version { get; }
+        ISyncThingFolderManager Folders { get; }
 
         void Start();
         Task StopAsync();
         Task RestartAsync();
         void Kill();
         void KillAllSyncthingProcesses();
-
-        bool TryFetchFolderById(string folderId, out Folder folder);
-        IReadOnlyCollection<Folder> FetchAllFolders();
 
         bool TryFetchDeviceById(string deviceId, out Device device);
         IReadOnlyCollection<Device> FetchAllDevices();
@@ -94,7 +91,6 @@ namespace SyncTrayzor.SyncThing
         public event EventHandler DataLoaded;
         public event EventHandler<SyncThingStateChangedEventArgs> StateChanged;
         public event EventHandler<MessageLoggedEventArgs> MessageLogged;
-        public event EventHandler<FolderSyncStateChangeEventArgs> FolderSyncStateChanged;
         public event EventHandler<DeviceConnectedEventArgs> DeviceConnected;
         public event EventHandler<DeviceDisconnectedEventArgs> DeviceDisconnected;
 
@@ -117,18 +113,6 @@ namespace SyncTrayzor.SyncThing
         public bool SyncthingDenyUpgrade { get; set; }
         public bool SyncthingRunLowPriority { get; set; }
 
-        // Folders is a ConcurrentDictionary, which suffices for most access
-        // However, it is sometimes set outright (in the case of an initial load or refresh), so we need this lock
-        // to create a memory barrier. The lock is only used when setting/fetching the field, not when accessing the
-        // Folders dictionary itself.
-        private readonly object foldersLock = new object();
-        private ConcurrentDictionary<string, Folder> _folders = new ConcurrentDictionary<string, Folder>();
-        private ConcurrentDictionary<string, Folder> folders
-        {
-            get { lock (this.foldersLock) { return this._folders; } }
-            set { lock (this.foldersLock) { this._folders = value; } }
-        }
-
         private readonly object devicesLock = new object();
         private ConcurrentDictionary<string, Device> _devices = new ConcurrentDictionary<string, Device>();
         public ConcurrentDictionary<string, Device> devices
@@ -138,6 +122,12 @@ namespace SyncTrayzor.SyncThing
         }
 
         public SyncthingVersion Version { get; private set; }
+
+        private readonly SyncThingFolderManager _folders;
+        public ISyncThingFolderManager Folders
+        {
+            get { return this._folders; }
+        }
 
         public SyncThingManager(
             ISyncThingProcessRunner processRunner,
@@ -153,6 +143,8 @@ namespace SyncTrayzor.SyncThing
             this.apiClient = apiClient;
             this.eventWatcher = eventWatcher;
             this.connectionsWatcher = connectionsWatcher;
+
+            this._folders = new SyncThingFolderManager(this.apiClient, this.eventWatcher);
 
             this.processRunner.ProcessStopped += (o, e) => this.ProcessStopped(e.ExitStatus);
             this.processRunner.MessageLogged += (o, e) => this.OnMessageLogged(e.LogMessage);
@@ -172,9 +164,6 @@ namespace SyncTrayzor.SyncThing
             };
 
             this.eventWatcher.StartupComplete += (o, e) => { var t = this.StartupCompleteAsync(); };
-            this.eventWatcher.SyncStateChanged += (o, e) => this.OnFolderSyncStateChanged(e);
-            this.eventWatcher.ItemStarted += (o, e) => this.ItemStarted(e.Folder, e.Item);
-            this.eventWatcher.ItemFinished += (o, e) => this.ItemFinished(e.Folder, e.Item);
             this.eventWatcher.DeviceConnected += (o, e) => this.OnDeviceConnected(e);
             this.eventWatcher.DeviceDisconnected += (o, e) => this.OnDeviceDisconnected(e);
 
@@ -220,17 +209,7 @@ namespace SyncTrayzor.SyncThing
         public void KillAllSyncthingProcesses()
         {
             this.processRunner.KillAllSyncthingProcesses();
-        }
-
-        public bool TryFetchFolderById(string folderId, out Folder folder)
-        {
-            return this.folders.TryGetValue(folderId, out folder);
-        }
-
-        public IReadOnlyCollection<Folder> FetchAllFolders()
-        {
-            return new List<Folder>(this.folders.Values).AsReadOnly();
-        }
+        }  
 
         public bool TryFetchDeviceById(string deviceId, out Device device)
         {
@@ -247,14 +226,9 @@ namespace SyncTrayzor.SyncThing
             return this.apiClient.ScanAsync(folderId, subPath);
         }
 
-        public async Task ReloadIgnoresAsync(string folderId)
+        public Task ReloadIgnoresAsync(string folderId)
         {
-            Folder folder;
-            if (!this.folders.TryGetValue(folderId, out folder))
-                return;
-
-            var ignores = await this.apiClient.FetchIgnoresAsync(folderId);
-            folder.Ignores = new FolderIgnores(ignores.IgnorePatterns, ignores.RegexPatterns);
+            return this._folders.ReloadIgnoresAsync(folderId);
         }
 
         private void SetState(SyncThingState state)
@@ -315,43 +289,13 @@ namespace SyncTrayzor.SyncThing
                 return new KeyValuePair<string, Device>(device.DeviceID, deviceObj);
             }));
 
-            var tilde = systemTask.Result.Tilde;
-
-            var folderConstructionTasks = configTask.Result.Folders.Select(async folder =>
-            {
-                var ignores = await this.apiClient.FetchIgnoresAsync(folder.ID);
-                var path = folder.Path;
-                if (path.StartsWith("~"))
-                    path = Path.Combine(tilde, path.Substring(1).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                return new Folder(folder.ID, path, new FolderIgnores(ignores.IgnorePatterns, ignores.RegexPatterns));
-            });
-
-            var folders = await Task.WhenAll(folderConstructionTasks);
-            this.folders = new ConcurrentDictionary<string, Folder>(folders.Select(x => new KeyValuePair<string, Folder>(x.FolderId, x)));
+            await this._folders.LoadFoldersAsync(configTask.Result, systemTask.Result);
 
             this.Version = versionTask.Result;
 
             this.OnDataLoaded();
             this.StartedTime = DateTime.UtcNow;
             this.IsDataLoaded = true;
-        }
-
-        private void ItemStarted(string folderId, string item)
-        {
-            Folder folder;
-            if (!this.folders.TryGetValue(folderId, out folder))
-                return; // Don't know about it
-
-            folder.AddSyncingPath(item);
-        }
-
-        private void ItemFinished(string folderId, string item)
-        {
-            Folder folder;
-            if (!this.folders.TryGetValue(folderId, out folder))
-                return; // Don't know about it
-
-            folder.RemoveSyncingPath(item);
         }
 
         private void OnDeviceConnected(EventWatcher.DeviceConnectedEventArgs e)
@@ -387,17 +331,6 @@ namespace SyncTrayzor.SyncThing
         private void OnMessageLogged(string logMessage)
         {
             this.eventDispatcher.Raise(this.MessageLogged, new MessageLoggedEventArgs(logMessage));
-        }
-
-        private void OnFolderSyncStateChanged(SyncStateChangedEventArgs e)
-        {
-            Folder folder;
-            if (!this.folders.TryGetValue(e.FolderId, out folder))
-                return; // We don't know about this folder
-
-            folder.SyncState = e.SyncState;
-
-            this.eventDispatcher.Raise(this.FolderSyncStateChanged, new FolderSyncStateChangeEventArgs(folder, e.PrevSyncState, e.SyncState));
         }
 
         private void OnTotalConnectionStatsChanged(SyncThingConnectionStats stats)

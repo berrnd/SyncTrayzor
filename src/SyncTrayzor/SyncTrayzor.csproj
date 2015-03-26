@@ -201,6 +201,7 @@
     <Compile Include="SyncThing\SyncThingConnectionStats.cs" />
     <Compile Include="SyncThing\SyncThingConnectionsWatcher.cs" />
     <Compile Include="SyncThing\EventWatcher\SyncThingEventWatcher.cs" />
+    <Compile Include="SyncThing\SyncThingFolderManager.cs" />
     <Compile Include="SyncThing\SyncThingManager.cs" />
     <Compile Include="SyncThing\SyncThingPoller.cs" />
     <Compile Include="SyncThing\SyncThingProcessRunner.cs" />

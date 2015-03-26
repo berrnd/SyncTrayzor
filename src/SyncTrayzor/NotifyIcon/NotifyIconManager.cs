@@ -79,7 +79,7 @@ namespace SyncTrayzor.NotifyIcon
             this.viewModel.WindowCloseRequested += (o, e) => this.rootViewModel.CloseToTray();
             this.viewModel.ExitRequested += (o, e) => this.rootViewModel.Shutdown();
 
-            this.syncThingManager.FolderSyncStateChanged += (o, e) =>
+            this.syncThingManager.Folders.SyncStateChanged += (o, e) =>
             {
                 if (this.ShowSynchronizedBalloon &&
                     DateTime.UtcNow - this.syncThingManager.LastConnectivityEventTime > syncedDeadTime &&
