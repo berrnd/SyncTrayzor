@@ -25,16 +25,19 @@ namespace SyncTrayzor.SyncThing.Api
         Task ScanAsync(string folder, string sub);
 
         [Get("/rest/system")]
-        Task<SystemInfo> FetchSystemInfoAsync();
+        Task<SystemInfoResponse> FetchSystemInfoAsync();
 
         [Get("/rest/connections")]
-        Task<Connections> FetchConnectionsAsync();
+        Task<ConnectionsResponse> FetchConnectionsAsync();
 
         [Get("/rest/version")]
-        Task<SyncthingVersion> FetchVersionAsync();
+        Task<SyncthingVersionResponse> FetchVersionAsync();
 
         [Get("/rest/ignores")]
-        Task<Ignores> FetchIgnoresAsync(string folder);
+        Task<IgnoresResponse> FetchIgnoresAsync(string folder);
+
+        [Get("/rest/model")]
+        Task<FolderModelResponse> FetchFolderModelAsync(string folder);
 
         [Post("/rest/restart")]
         Task RestartAsync();

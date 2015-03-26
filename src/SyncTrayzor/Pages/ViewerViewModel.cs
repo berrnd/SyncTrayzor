@@ -40,10 +40,18 @@ namespace SyncTrayzor.Pages
                 this.syncThingState = e.NewState;
             };
 
-            this.syncThingManager.Folders.FoldersChanged += (o, e) =>
+            this.syncThingManager.Folders.FoldersReloaded += (o, e) =>
             {
                 var folders = e.Folders.Select(x => new FolderViewModel(x));
                 this.Folders = new BindableCollection<FolderViewModel>(folders);
+            };
+
+            this.syncThingManager.Folders.FolderChanged += (o, e) =>
+            {
+                foreach (var folderViewModel in this.Folders.Where(x => x.FolderId == e.Folder.FolderId))
+                {
+                    folderViewModel.Update();
+                }
             };
 
             this.SetCulture(configurationProvider.Load());

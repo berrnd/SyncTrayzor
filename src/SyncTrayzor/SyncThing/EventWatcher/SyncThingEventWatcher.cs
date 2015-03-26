@@ -18,6 +18,7 @@ namespace SyncTrayzor.SyncThing.EventWatcher
         event EventHandler<ItemStateChangedEventArgs> ItemFinished;
         event EventHandler<DeviceConnectedEventArgs> DeviceConnected;
         event EventHandler<DeviceDisconnectedEventArgs> DeviceDisconnected;
+        event EventHandler<LocalIndexUpdatedEventArgs> LocalIndexUpdated;
     }
 
     public class SyncThingEventWatcher : SyncThingPoller, ISyncThingEventWatcher, IEventVisitor
@@ -33,6 +34,7 @@ namespace SyncTrayzor.SyncThing.EventWatcher
         public event EventHandler<ItemStateChangedEventArgs> ItemFinished;
         public event EventHandler<DeviceConnectedEventArgs> DeviceConnected;
         public event EventHandler<DeviceDisconnectedEventArgs> DeviceDisconnected;
+        public event EventHandler<LocalIndexUpdatedEventArgs> LocalIndexUpdated;
 
         public SyncThingEventWatcher(ISyncThingApiClient apiClient)
             : base(TimeSpan.Zero)
@@ -115,6 +117,13 @@ namespace SyncTrayzor.SyncThing.EventWatcher
                 handler(this, new DeviceDisconnectedEventArgs(deviceId, error));
         }
 
+        private void OnLocalIndexUpdated(string flags, DateTime modified, string name, string folder, long size)
+        {
+            var handler = this.LocalIndexUpdated;
+            if (handler != null)
+                handler(this, new LocalIndexUpdatedEventArgs(flags, modified, name, folder, size));
+        }
+
         #region IEventVisitor
 
         public void Accept(GenericEvent evt)
@@ -127,6 +136,7 @@ namespace SyncTrayzor.SyncThing.EventWatcher
 
         public void Accept(LocalIndexUpdatedEvent evt)
         {
+            this.OnLocalIndexUpdated(evt.Data.Flags, evt.Data.Modified, evt.Data.Name, evt.Data.Folder, evt.Data.Size);
         }
 
         public void Accept(StateChangedEvent evt)

@@ -37,7 +37,7 @@ namespace SyncTrayzor.SyncThing
         bool SyncthingRunLowPriority { get; set; }
         DateTime StartedTime { get; }
         DateTime LastConnectivityEventTime { get; }
-        SyncthingVersion Version { get; }
+        SyncthingVersionResponse Version { get; }
         ISyncThingFolderManager Folders { get; }
 
         void Start();
@@ -121,7 +121,7 @@ namespace SyncTrayzor.SyncThing
             set { lock (this.devicesLock) this._devices = value; }
         }
 
-        public SyncthingVersion Version { get; private set; }
+        public SyncthingVersionResponse Version { get; private set; }
 
         private readonly SyncThingFolderManager _folders;
         public ISyncThingFolderManager Folders

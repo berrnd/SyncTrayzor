@@ -26,7 +26,7 @@ namespace SyncTrayzor.SyncThing.Api
         public string ClientVersion { get; set; }
     }
 
-    public class Connections
+    public class ConnectionsResponse
     {
         [JsonProperty("total")]
         public ItemConnectionData Total { get; set; }

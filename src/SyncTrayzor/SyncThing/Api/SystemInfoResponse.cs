@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SyncTrayzor.SyncThing.Api
 {
-    public class SystemInfo
+    public class SystemInfoResponse
     {
         [JsonProperty("alloc")]
         public long AllocatedMemoryInUse { get; set; }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SyncTrayzor.SyncThing.Api
 {
-    public class Ignores
+    public class IgnoresResponse
     {
         private List<string> _ignorePatterns = new List<string>();
 

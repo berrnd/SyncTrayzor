@@ -16,7 +16,8 @@ namespace SyncTrayzor.SyncThing
         bool TryFetchById(string folderId, out Folder folder);
         IReadOnlyCollection<Folder> FetchAll();
 
-        event EventHandler<FoldersChangedEventArgs> FoldersChanged;
+        event EventHandler<FoldersReloadedEventArgs> FoldersReloaded;
+        event EventHandler<FolderChangedEventArgs> FolderChanged;
         event EventHandler<FolderSyncStateChangeEventArgs> SyncStateChanged;
     }
 
@@ -26,7 +27,8 @@ namespace SyncTrayzor.SyncThing
         private readonly ISyncThingApiClient apiClient;
         private readonly ISyncThingEventWatcher eventWatcher;
 
-        public event EventHandler<FoldersChangedEventArgs> FoldersChanged;
+        public event EventHandler<FoldersReloadedEventArgs> FoldersReloaded;
+        public event EventHandler<FolderChangedEventArgs> FolderChanged;
         public event EventHandler<FolderSyncStateChangeEventArgs> SyncStateChanged;
 
         // Folders is a ConcurrentDictionary, which suffices for most access
@@ -50,6 +52,7 @@ namespace SyncTrayzor.SyncThing
             this.eventWatcher.SyncStateChanged += (o, e) => this.OnSyncStateChanged(e);
             this.eventWatcher.ItemStarted += (o, e) => this.ItemStarted(e.Folder, e.Item);
             this.eventWatcher.ItemFinished += (o, e) => this.ItemFinished(e.Folder, e.Item);
+            this.eventWatcher.LocalIndexUpdated += (o, e) => this.LocalIndexUpdated(e.Folder);
         }
 
         public bool TryFetchById(string folderId, out Folder folder)
@@ -72,21 +75,23 @@ namespace SyncTrayzor.SyncThing
             folder.Ignores = new FolderIgnores(ignores.IgnorePatterns, ignores.RegexPatterns);
         }
 
-        public async Task LoadFoldersAsync(Config config, SystemInfo systemInfo)
+        public async Task LoadFoldersAsync(Config config, SystemInfoResponse systemInfo)
         {
-            var folderConstructionTasks = config.Folders.Select(async folder =>
+            var folderConstructionTasks = config.Folders.Select(async configFolder =>
             {
-                var ignores = await this.apiClient.FetchIgnoresAsync(folder.ID);
-                var expandedPath = folder.Path;
+                var expandedPath = configFolder.Path;
                 if (expandedPath.StartsWith("~"))
                     expandedPath = Path.Combine(systemInfo.Tilde, expandedPath.Substring(1).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-                return new Folder(folder.ID, folder.Path, expandedPath, new FolderIgnores(ignores.IgnorePatterns, ignores.RegexPatterns));
+
+                var folder = new Folder(configFolder.ID, configFolder.Path, expandedPath);
+                await Task.WhenAll(this.LocalFolderIgnoresAsync(folder), this.RefreshFolderAsync(folder));
+                return folder;
             });
 
             var folders = await Task.WhenAll(folderConstructionTasks);
             this.folders = new ConcurrentDictionary<string, Folder>(folders.Select(x => new KeyValuePair<string, Folder>(x.FolderId, x)));
 
-            this.OnFoldersChanged(this.FetchAll());
+            this.OnFoldersReloaded(this.FetchAll());
         }
 
         private void ItemStarted(string folderId, string item)
@@ -95,6 +100,7 @@ namespace SyncTrayzor.SyncThing
             if (!this.folders.TryGetValue(folderId, out folder))
                 return; // Don't know about it
 
+            // This isn't worthy (currently) of a FolderChanged event
             folder.AddSyncingPath(item);
         }
 
@@ -104,12 +110,48 @@ namespace SyncTrayzor.SyncThing
             if (!this.folders.TryGetValue(folderId, out folder))
                 return; // Don't know about it
 
+            // This isn't worthy (currently) of a FolderChanged event
             folder.RemoveSyncingPath(item);
         }
 
-        private void OnFoldersChanged(IReadOnlyCollection<Folder> folders)
+        private async void LocalIndexUpdated(string folderId)
         {
-            this.eventDispatcher.Raise(this.FoldersChanged, new FoldersChangedEventArgs(folders));
+            Folder folder;
+            if (!this.folders.TryGetValue(folderId, out folder))
+                return; // Don't know about it
+
+            await this.RefreshFolderAsync(folder);
+
+            this.OnFolderChanged(folder);
+        }
+
+        private async Task LocalFolderIgnoresAsync(Folder folder)
+        {
+            var ignores = await this.apiClient.FetchIgnoresAsync(folder.FolderId);
+            folder.Ignores = new FolderIgnores(ignores.IgnorePatterns, ignores.RegexPatterns);
+        }
+
+        private async Task RefreshFolderAsync(Folder folder)
+        {
+            var folderModel = await this.apiClient.FetchFolderModelAsync(folder.FolderId);
+
+            folder.GlobalState = new FolderState(folderModel.GlobalBytes, folderModel.GlobalDeleted, folderModel.GlobalFiles);
+            folder.LocalState = new FolderState(folderModel.LocalBytes, folderModel.LocalDeleted, folderModel.LocalFiles);
+        }
+
+        private void OnFoldersReloaded(IReadOnlyCollection<Folder> folders)
+        {
+            this.eventDispatcher.Raise(this.FoldersReloaded, new FoldersReloadedEventArgs(folders));
+
+            foreach (var folder in folders)
+            {
+                this.OnFolderChanged(folder);
+            }
+        }
+
+        private void OnFolderChanged(Folder folder)
+        {
+            this.eventDispatcher.Raise(this.FolderChanged, new FolderChangedEventArgs(folder));
         }
 
         private void OnSyncStateChanged(SyncStateChangedEventArgs e)

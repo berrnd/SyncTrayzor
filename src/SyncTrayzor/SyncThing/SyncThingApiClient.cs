@@ -20,11 +20,12 @@ namespace SyncTrayzor.SyncThing
         Task<List<Event>> FetchEventsAsync(int since, int? limit = null);
         Task<Config> FetchConfigAsync();
         Task ScanAsync(string folderId, string subPath);
-        Task<SystemInfo> FetchSystemInfoAsync();
-        Task<Connections> FetchConnectionsAsync();
-        Task<SyncthingVersion> FetchVersionAsync();
-        Task<Ignores> FetchIgnoresAsync(string folderId);
+        Task<SystemInfoResponse> FetchSystemInfoAsync();
+        Task<ConnectionsResponse> FetchConnectionsAsync();
+        Task<SyncthingVersionResponse> FetchVersionAsync();
+        Task<IgnoresResponse> FetchIgnoresAsync(string folderId);
         Task RestartAsync();
+        Task<FolderModelResponse> FetchFolderModelAsync(string folderId);
     }
 
     public class SyncThingApiClient : ISyncThingApiClient
@@ -79,7 +80,7 @@ namespace SyncTrayzor.SyncThing
             return this.api.ScanAsync(folderId, subPath);
         }
 
-        public async Task<SystemInfo> FetchSystemInfoAsync()
+        public async Task<SystemInfoResponse> FetchSystemInfoAsync()
         {
             this.EnsureSetup();
             var systemInfo = await this.api.FetchSystemInfoAsync();
@@ -87,13 +88,13 @@ namespace SyncTrayzor.SyncThing
             return systemInfo;
         }
 
-        public Task<Connections> FetchConnectionsAsync()
+        public Task<ConnectionsResponse> FetchConnectionsAsync()
         {
             this.EnsureSetup();
             return this.api.FetchConnectionsAsync();
         }
 
-        public async Task<SyncthingVersion> FetchVersionAsync()
+        public async Task<SyncthingVersionResponse> FetchVersionAsync()
         {
             this.EnsureSetup();
             var version = await this.api.FetchVersionAsync();
@@ -101,7 +102,7 @@ namespace SyncTrayzor.SyncThing
             return version;
         }
 
-        public async Task<Ignores> FetchIgnoresAsync(string folderId)
+        public async Task<IgnoresResponse> FetchIgnoresAsync(string folderId)
         {
             this.EnsureSetup();
             var ignores = await this.api.FetchIgnoresAsync(folderId);
@@ -114,6 +115,14 @@ namespace SyncTrayzor.SyncThing
             this.EnsureSetup();
             logger.Debug("Restarting Syncthing");
             return this.api.RestartAsync();
+        }
+
+        public async Task<FolderModelResponse> FetchFolderModelAsync(string folderId)
+        {
+            this.EnsureSetup();
+            var folderModel = await this.api.FetchFolderModelAsync(folderId);
+            logger.Debug("Fethed folder model for {0}: {1}", folderId, folderModel);
+            return folderModel;
         }
 
         private void EnsureSetup()

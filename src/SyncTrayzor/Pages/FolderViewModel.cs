@@ -11,6 +11,8 @@ namespace SyncTrayzor.Pages
 {
     public class FolderViewModel : PropertyChangedBase
     {
+        private readonly Folder folder;
+
         public BindableCollection<DisplayLine> DisplayLines { get; private set; }
         public string FolderId { get; private set; }
 
@@ -19,15 +21,23 @@ namespace SyncTrayzor.Pages
 
         public FolderViewModel(Folder folder)
         {
+            this.folder = folder;
+
             this.FolderId = folder.FolderId;
             this.folderPath.Value = folder.Path;
-            this.globalState.Value = "34 items, ~85.5MiB";
+
+            this.Update();
 
             this.DisplayLines = new BindableCollection<DisplayLine>()
             {
                 this.folderPath,
                 this.globalState,
             };
+        }
+
+        public void Update()
+        {
+            this.globalState.Value = String.Format("{0} items, ~{1} bytes", this.folder.GlobalState.Files, this.folder.GlobalState.Bytes);
         }
     }
 }

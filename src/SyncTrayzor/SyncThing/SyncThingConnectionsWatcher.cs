@@ -27,7 +27,7 @@ namespace SyncTrayzor.SyncThing
         private readonly ISyncThingApiClient apiClient;
         
         private DateTime lastPollCompletion;
-        private Connections prevConnections;
+        private ConnectionsResponse prevConnections;
         private bool haveNotifiedOfNoChange;
 
         public event EventHandler<ConnectionStatsChangedEventArgs> TotalConnectionStatsChanged;

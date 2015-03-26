@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace SyncTrayzor.SyncThing
 {
-    public class FoldersChangedEventArgs : EventArgs
+    public class FoldersReloadedEventArgs : EventArgs
     {
         public IReadOnlyCollection<Folder> Folders { get; private set; }
 
-        public FoldersChangedEventArgs(IReadOnlyCollection<Folder> folders)
+        public FoldersReloadedEventArgs(IReadOnlyCollection<Folder> folders)
         {
             this.Folders = folders;
         }

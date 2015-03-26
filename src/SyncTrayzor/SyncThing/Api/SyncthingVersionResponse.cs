@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SyncTrayzor.SyncThing.Api
 {
-    public class SyncthingVersion
+    public class SyncthingVersionResponse
     {
         [JsonProperty("arch")]
         public string Arch { get; set; }
