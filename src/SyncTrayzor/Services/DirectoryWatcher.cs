@@ -1,4 +1,5 @@
 ﻿using NLog;
+using SyncTrayzor.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -117,8 +118,16 @@ namespace SyncTrayzor.Services
 
         private void OnRenamed(object source, RenamedEventArgs e)
         {
+            //Construct the old-full-path ourselves, workaround for e.OldFullPath cannot handle long paths,
+            //this is unneeded but no problem when the path is actually not too long
+            //Discussion reference: https://github.com/canton7/SyncTrayzor/pull/74
+            String shortFullPath = PathExtensions.GetShortPathName(e.FullPath);
+            String shortDirectoryPath = PathExtensions.GetDirectoryName(shortFullPath);
+            String oldFileName = Path.GetFileName(e.OldName);
+            String oldFullPath = Path.Combine(shortDirectoryPath, oldFileName);
+
             this.PathChanged(e.FullPath);
-            this.PathChanged(e.OldFullPath);
+            this.PathChanged(oldFullPath);
         }
 
         private void PathChanged(string path)

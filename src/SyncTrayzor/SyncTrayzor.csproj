@@ -271,6 +271,7 @@
     <Compile Include="Utils\FluentModelValidator.cs" />
     <Compile Include="Utils\FormatUtils.cs" />
     <Compile Include="Utils\ObservableQueue.cs" />
+    <Compile Include="Utils\PathExtensions.cs" />
     <Compile Include="Utils\SafeSyncthingExtensions.cs" />
     <Compile Include="Utils\SemaphoreSlimExtensions.cs" />
     <Compile Include="Utils\StreamExtensions.cs" />
